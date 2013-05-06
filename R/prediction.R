@@ -1,22 +1,46 @@
-prediction <- function(predictions, labels, label.ordering=NULL) {
+prediction<-function (predictions, labels, label.ordering = NULL, weights=NULL) {
 
     ## bring 'predictions' and 'labels' into list format,
     ## each list entry representing one x-validation run
 
     ## convert predictions into canonical list format
     if (is.data.frame(predictions)) {
-        names(predictions) <- c()
-        predictions <- as.list(predictions)
+      if (!is.null(weights)) {
+        if (!is.data.frame(weights)) {
+          stop("Predictions are in data frame format: weights are expected to be in the same format")
+        } else if (dim(predictions) != dim(weights)) {
+          stop("Weights data frame dimensions must equal the predictions data frame dimensions")
+        }
+      }
+      names(predictions) <- c()
+      predictions <- as.list(predictions)
+      weights <- as.list(weights)
     } else if (is.matrix(predictions)) {
-        predictions <- as.list(data.frame(predictions))
-        names(predictions) <- c()
+      if (!is.null(weights)) {
+        if (!is.matrix(weights)) {
+          stop("Predictions are in matrix format: weights are expected to be in the same format")
+        } else if (dim(predictions) != dim(weights)) {
+          stop("Weights matrix dimensions must equal the predictions matrix dimensions")
+        }
+      }
+      predictions <- as.list(data.frame(predictions))
+      names(predictions) <- c()
+      weights <- as.list(data.frame(weights))
     } else if (is.vector(predictions) && !is.list(predictions)) {
-        predictions <- list(predictions)
+      if (!is.null(weights)) {
+        if (!(is.vector(weights) && !is.list(weights))) {
+          stop("Predictions are in vector format: weights are expected to be in the same format")
+        } else if (length(predictions) != length(weights)) {
+          stop("Weights vector lenghts must equal the number of rows in the predictions vector")
+        }
+      }
+      predictions <- list(predictions)
+      weights <- list(weights)
     } else if (!is.list(predictions)) {
         stop("Format of predictions is invalid.")
-    } 
+    }
     ## if predictions is a list -> keep unaltered
-  
+
     ## convert labels into canonical list format
     if (is.data.frame(labels)) {
         names(labels) <- c()
@@ -41,12 +65,13 @@ prediction <- function(predictions, labels, label.ordering=NULL) {
     if (! all(sapply(predictions, length) == sapply(labels, length)))
       stop(paste("Number of predictions in each run must be equal",
                  "to the number of labels for each run."))
-    
+
     ## only keep prediction/label pairs that are finite numbers
     for (i in 1:length(predictions)) {
         finite.bool <- is.finite( predictions[[i]] )
         predictions[[i]] <- predictions[[i]][ finite.bool ]
         labels[[i]] <- labels[[i]][ finite.bool ]
+        weights[[i]] <- weights[[i]][ finite.bool ]
     }
 
     ## abort if 'labels' format is inconsistent across
@@ -57,7 +82,7 @@ prediction <- function(predictions, labels, label.ordering=NULL) {
         label.format <- "factor"
     } else if (all(sapply( labels, is.ordered))) {
         label.format <- "ordered"
-    } else if (all(sapply( labels, is.character)) || 
+    } else if (all(sapply( labels, is.character)) ||
                all(sapply( labels, is.numeric)) ||
                all(sapply( labels, is.logical))) {
         label.format <- "normal"
@@ -65,14 +90,14 @@ prediction <- function(predictions, labels, label.ordering=NULL) {
         stop(paste("Inconsistent label data type across different",
                    "cross-validation runs."))
     }
-    
+
     ## abort if levels are not consistent across different
     ## cross-validation runs
     if (! all(sapply(labels, levels)==levels(labels[[1]])) ) {
         stop(paste("Inconsistent factor levels across different",
                    "cross-validation runs."))
     }
-        
+
     ## convert 'labels' into ordered factors, aborting if the number
     ## of classes is not equal to 2.
     levels <- c()
@@ -127,13 +152,15 @@ prediction <- function(predictions, labels, label.ordering=NULL) {
     n.neg <- list()
     n.pos.pred <- list()
     n.neg.pred <- list()
+    w <- list()
     for (i in 1:length(predictions)) {
-        n.pos <- c( n.pos, sum( labels[[i]] == levels[2] ))
-        n.neg <- c( n.neg, sum( labels[[i]] == levels[1] ))
-        ans <- .compute.unnormalized.roc.curve( predictions[[i]], labels[[i]] )
+        ans <- .compute.unnormalized.roc.curve(predictions[[i]], labels[[i]], weights[[i]])
         cutoffs <- c( cutoffs, list( ans$cutoffs ))
-        fp <- c( fp, list( ans$fp ))
-        tp <- c( tp, list( ans$tp ))
+        w <- c( w, list( ans$w ))
+        n.pos <- c( n.pos, sum( (labels[[i]] == levels[2]) * ans$w ))
+        n.neg <- c( n.neg, sum( (labels[[i]] == levels[1]) * ans$w ))
+        fp <- c( fp, list( ans$fp )) # already weighted!
+        tp <- c( tp, list( ans$tp )) # already weighted!
         fn <- c( fn, list( n.pos[[i]] - tp[[i]] ))
         tn <- c( tn, list( n.neg[[i]] - fp[[i]] ))
         n.pos.pred <- c(n.pos.pred, list(tp[[i]] + fp[[i]]) )
@@ -144,6 +171,7 @@ prediction <- function(predictions, labels, label.ordering=NULL) {
     return( new("prediction", predictions=predictions,
                 labels=labels,
                 cutoffs=cutoffs,
+                w=w,
                 fp=fp,
                 tp=tp,
                 fn=fn,
@@ -156,24 +184,22 @@ prediction <- function(predictions, labels, label.ordering=NULL) {
 
 
 ## fast fp/tp computation based on cumulative summing
-.compute.unnormalized.roc.curve <- function( predictions, labels ) {
-    ## determine the labels that are used for the pos. resp. neg. class :
-    pos.label <- levels(labels)[2]
-    neg.label <- levels(labels)[1]
-
-    pred.order <- order(predictions, decreasing=TRUE)
-    predictions.sorted <- predictions[pred.order]
-    tp <- cumsum(labels[pred.order]==pos.label)
-    fp <- cumsum(labels[pred.order]==neg.label)
-
-    ## remove fp & tp for duplicated predictions
-    ## as duplicated keeps the first occurrence, but we want the last, two
-    ## rev are used.
-    ## Highest cutoff (Infinity) corresponds to tp=0, fp=0
-    dups <- rev(duplicated(rev(predictions.sorted)))
-    tp <- c(0, tp[!dups])
-    fp <- c(0, fp[!dups])
-    cutoffs <- c(Inf, predictions.sorted[!dups])
-    
-    return(list( cutoffs=cutoffs, fp=fp, tp=tp ))
+.compute.unnormalized.roc.curve<-function (predictions, labels, weights) {
+  if (is.null(weights)) {
+    weights<-rep(1,length(labels))
+  }
+  levels_ <- levels(labels)
+  pos.label <- levels_[2]
+  neg.label <- levels_[1]
+  pred.order <- order(predictions, decreasing = TRUE)
+  labels.sorted <- labels[pred.order]
+  predictions.sorted <- predictions[pred.order]
+  weights.sorted <- weights[pred.order]
+  tp <- cumsum((labels.sorted == pos.label) * weights.sorted)
+  fp <- cumsum((labels.sorted == neg.label) * weights.sorted)
+  dups <- rev(duplicated(rev(predictions.sorted)))
+  tp <- c(0, tp[!dups])
+  fp <- c(0, fp[!dups])
+  cutoffs <- c(Inf, predictions.sorted[!dups])
+  return(list(cutoffs = cutoffs, fp = fp, tp = tp, w = weights.sorted))
 }

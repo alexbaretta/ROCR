@@ -80,7 +80,8 @@ performance <- function(prediction.obj, measure,
                                   n.pos= prediction.obj@n.pos[[i]],
                                   n.neg= prediction.obj@n.neg[[i]],
                                   n.pos.pred= prediction.obj@n.pos.pred[[i]],
-                                  n.neg.pred= prediction.obj@n.neg.pred[[i]])
+                                  n.neg.pred= prediction.obj@n.neg.pred[[i]],
+                                  w= prediction.obj@w[[i]])
 
             ans <- do.call( function.name, argumentlist )
 

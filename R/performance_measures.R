@@ -4,49 +4,49 @@
 
 .performance.accuracy <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
     
-      list( cutoffs, (tn+tp) / length(predictions) )
+      list( cutoffs, (tn+tp) / sum(w) )
   }
 
 .performance.error.rate <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
 
-      list( cutoffs, (fn+fp) / length(predictions) )
+      list( cutoffs, (fn+fp) / sum(w) )
   }
 
 .performance.false.positive.rate <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
     
       list( cutoffs, fp / n.neg )
   }
 
 .performance.true.positive.rate <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
     
       list( cutoffs, tp / n.pos )
   }
 
 .performance.false.negative.rate <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
     
       list( cutoffs, fn / n.pos )
   }
 
 .performance.true.negative.rate <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
     
       list( cutoffs, tn / n.neg )
   }
 
 .performance.positive.predictive.value <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
     
       ppv <- tp / (fp + tp)
       list( cutoffs, ppv )
@@ -54,7 +54,7 @@
 
 .performance.negative.predictive.value <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
     
       npv <- tn / (tn + fn)
       list( cutoffs, npv )
@@ -62,21 +62,21 @@
 
 .performance.prediction.conditioned.fallout <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
       ppv <- .performance.positive.predictive.value(predictions, labels,
                                                     cutoffs, fp, tp, fn, tn,
                                                     n.pos, n.neg, n.pos.pred,
-                                                    n.neg.pred)[[2]]
+                                                    n.neg.pred, w)[[2]]
       list( cutoffs, 1 - ppv )
   }
 
 .performance.prediction.conditioned.miss <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
       npv <- .performance.negative.predictive.value(predictions, labels,
                                                     cutoffs, fp, tp, fn, tn,
                                                     n.pos, n.neg, n.pos.pred,
-                                                    n.neg.pred)[[2]]
+                                                    n.neg.pred, w)[[2]]
       list( cutoffs, 1 - npv )
   }
 
@@ -88,14 +88,14 @@
 
 .performance.rate.of.positive.predictions <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
 
       list( cutoffs, n.pos.pred / (n.pos + n.neg) )
   }
 
 .performance.rate.of.negative.predictions <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
 
       list( cutoffs, n.neg.pred / (n.pos + n.neg) )
   }
@@ -107,7 +107,7 @@
 
 .performance.phi <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
 
       list(cutoffs,
            (tn*tp - fn*fp) / sqrt(n.pos * n.neg * n.pos.pred * n.neg.pred) )
@@ -115,7 +115,7 @@
 
 .performance.mutual.information <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
 
       n.samples <- n.pos + n.neg
       mi <- c()
@@ -137,7 +137,7 @@
 
 .performance.chisq <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
 
       chisq <- c()
       for (i in 1:length(cutoffs)) {
@@ -149,7 +149,7 @@
 
 .performance.odds.ratio <- 
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
       
 
     list( cutoffs, tp * tn / (fn * fp) )
@@ -162,7 +162,7 @@
 
 .performance.lift <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
       
       n.samples <- n.pos + n.neg
       list( cutoffs, (tp / n.pos) / (n.pos.pred / n.samples) )
@@ -170,18 +170,18 @@
 
 .performance.f <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred, alpha) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w, alpha) {
 
       prec <- .performance.positive.predictive.value(predictions, labels,
                                                      cutoffs, fp, tp, fn, tn,
                                                      n.pos, n.neg, n.pos.pred,
-                                                     n.neg.pred)[[2]]
+                                                     n.neg.pred, w)[[2]]
       list( cutoffs,  1/ ( alpha*(1/prec) + (1-alpha)*(1/(tp/n.pos))  ) )
   }
 
 .performance.rocconvexhull <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
       
       x <- fp / n.neg
       y <- tp / n.pos
@@ -218,7 +218,7 @@
 
 .performance.auc <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred, fpr.stop) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w, fpr.stop) {
       
       x <- fp / n.neg
       y <- tp / n.pos
@@ -250,7 +250,7 @@
 
 .performance.precision.recall.break.even.point <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
 
       pred <- prediction( predictions, labels)
       perf <- performance( pred, measure="prec", x.measure="rec")
@@ -298,7 +298,7 @@
 
 .performance.calibration.error <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred, window.size) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w, window.size) {
 
       if (window.size > length(predictions)) {
           stop("Window size exceeds number of predictions.")
@@ -334,7 +334,7 @@
 
 .performance.mean.cross.entropy <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
 
       if (! all(levels(labels)==c(0,1)) ||
           any(predictions<0) || any(predictions>1) ) {
@@ -353,7 +353,7 @@
 
 .performance.root.mean.squared.error <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
       ## convert labels from factor to numeric values
       labels <- as.numeric(levels(labels))[labels]
       if (any(is.na(labels))) {
@@ -368,7 +368,7 @@
 ## ----------------------------------------------------------------------------
 
 .performance.sar <- function( predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
 
     pred <- prediction( predictions, labels)
     perf.acc <- performance( pred, measure="acc")
@@ -387,7 +387,7 @@
 
 .performance.expected.cost <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w) {
       
       ## kick out suboptimal values (i.e. fpr/tpr pair for which another one
       ## with same fpr and higher tpr exists, 
@@ -471,7 +471,7 @@
 
 .performance.cost <-
   function(predictions, labels, cutoffs, fp, tp, fn, tn,
-           n.pos, n.neg, n.pos.pred, n.neg.pred, cost.fp, cost.fn) {
+           n.pos, n.neg, n.pos.pred, n.neg.pred, w, cost.fp, cost.fn) {
       
     n.samples <- n.pos + n.neg
     cost <- ((n.pos / n.samples) * (fn / n.pos) * cost.fn +

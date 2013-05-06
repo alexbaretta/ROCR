@@ -2,6 +2,7 @@ setClass("prediction",
          representation(predictions = "list",
                         labels      = "list",
                         cutoffs     = "list",
+                        w           = "list", # observation weights
                         fp          = "list",
                         tp          = "list",
                         tn          = "list",
